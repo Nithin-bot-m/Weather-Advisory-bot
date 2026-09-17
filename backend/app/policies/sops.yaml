@@ -1,0 +1,17 @@
+# Weather Advisory Standard Operating Procedures (SOPs) Placeholder
+policies:
+  - id: high_wind
+    name: High Wind Advisory
+    condition: wind_speed_10m > 40
+    severity: warning
+    action: "Advise users to stay indoors and secure outdoor objects."
+  - id: heavy_rain
+    name: Heavy Rainfall Advisory
+    condition: precipitation > 15
+    severity: warning
+    action: "Advise users to avoid low-lying areas and carry rain gear."
+  - id: high_uv
+    name: High UV Index Advisory
+    condition: uv_index >= 8
+    severity: advisory
+    action: "Advise users to apply sunscreen and limit direct sun exposure."
