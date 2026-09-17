@@ -1,14 +1,28 @@
 """
-LangGraph state definitions (Placeholder for Step 2+).
+LangGraph state definitions for Weather Advisory Support Bot.
 """
 from typing import TypedDict, List, Optional, Dict, Any
 
 
 class GraphState(TypedDict, total=False):
+    # USER INPUT
+    user_question: str
     messages: List[Dict[str, Any]]
-    query: str
+
+    # EXTRACTED INTENT
+    activity: Optional[str]
     location: Optional[str]
-    coordinates: Optional[Dict[str, float]]
-    weather_data: Optional[Dict[str, Any]]
-    sop_matched: Optional[Dict[str, Any]]
+    time_context: Optional[str]
+
+    # EXTERNAL FACTS
+    resolved_location: Optional[Dict[str, Any]]
+    weather: Optional[Dict[str, Any]]
+
+    # POLICY DECISION
+    matching_sops: Optional[List[Dict[str, Any]]]
+    selected_sop: Optional[Dict[str, Any]]
+
+    # OUTPUT
     response: Optional[str]
+    error: Optional[str]
+

@@ -48,11 +48,7 @@ def test_open_meteo_forecast_connectivity():
 
 
 def test_open_meteo_geocoding_connectivity():
-    data = asyncio.run(search_location("Bhopal"))
-    assert "results" in data
-    assert len(data["results"]) > 0
-    first_result = data["results"][0]
-    assert "name" in first_result
-    assert first_result["name"].lower() == "bhopal"
-    assert "latitude" in first_result
-    assert "longitude" in first_result
+    location_data = asyncio.run(search_location("Bhopal"))
+    assert location_data.name.lower() == "bhopal"
+    assert location_data.latitude is not None
+    assert location_data.longitude is not None

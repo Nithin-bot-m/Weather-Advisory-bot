@@ -1,17 +1,197 @@
-# Weather Advisory Standard Operating Procedures (SOPs) Placeholder
-policies:
-  - id: high_wind
-    name: High Wind Advisory
-    condition: wind_speed_10m > 40
-    severity: warning
-    action: "Advise users to stay indoors and secure outdoor objects."
-  - id: heavy_rain
-    name: Heavy Rainfall Advisory
-    condition: precipitation > 15
-    severity: warning
-    action: "Advise users to avoid low-lying areas and carry rain gear."
-  - id: high_uv
-    name: High UV Index Advisory
-    condition: uv_index >= 8
-    severity: advisory
-    action: "Advise users to apply sunscreen and limit direct sun exposure."
+# Weather Advisory Standard Operating Procedures (SOPs)
+# Note: These thresholds are demonstration policies created for this assignment and are not official medical or meteorological guidance.
+
+sops:
+  - id: SOP-001
+    category: outdoor_exercise
+    name: Strong Wind Cycling Warning
+    severity: high
+    activities:
+      - cycling
+      - biking
+      - bike ride
+      - two-wheeler
+    conditions:
+      wind_speed_10m:
+        min: 40
+    advice: >
+      Strong winds (>= 40 km/h) exceed safety thresholds for cycling and two-wheelers.
+      Consider postponing outdoor rides or choosing indoor exercise options.
+
+  - id: SOP-002
+    category: outdoor_exercise
+    name: Extreme Heat Running Hazard
+    severity: high
+    activities:
+      - running
+      - jogging
+      - marathon
+      - sprint
+    conditions:
+      temperature_2m:
+        min: 38
+    advice: >
+      Extreme temperature (>= 38°C) presents severe heatstroke risks for runners.
+      Avoid intense outdoor runs during peak daylight hours.
+
+  - id: SOP-003
+    category: outdoor_exercise
+    name: Moderate Rain Hiking Advisory
+    severity: medium
+    activities:
+      - hiking
+      - trekking
+      - trail walk
+    conditions:
+      precipitation:
+        min: 10
+    advice: >
+      Moderate rainfall (>= 10 mm) can make trail terrain slippery and dangerous.
+      Ensure waterproof gear and evaluate trail stability before hiking.
+
+  - id: SOP-004
+    category: travel
+    name: High Wind Highway Driving Hazard
+    severity: high
+    activities:
+      - driving
+      - commuting
+      - travel
+      - highway driving
+    conditions:
+      wind_speed_10m:
+        min: 50
+    advice: >
+      High wind gusts (>= 50 km/h) significantly reduce vehicle control on highways.
+      Reduce driving speed and maintain distance from high-profile vehicles.
+
+  - id: SOP-005
+    category: travel
+    name: Heavy Rainfall Road Warning
+    severity: high
+    activities:
+      - driving
+      - commuting
+      - travel
+      - road travel
+    conditions:
+      precipitation:
+        min: 20
+    advice: >
+      Heavy rainfall (>= 20 mm) increases aquaplaning and severe localized flooding risks.
+      Avoid unnecessary road travel and low-lying underpasses.
+
+  - id: SOP-006
+    category: vulnerable_groups
+    name: Children Heat Protection Advisory
+    severity: high
+    activities:
+      - children
+      - kids
+      - park
+      - outdoor play
+      - school play
+    conditions:
+      temperature_2m:
+        min: 35
+    advice: >
+      Temperatures exceeding 35°C pose rapid dehydration risks for children.
+      Limit outdoor play to shaded areas and ensure continuous hydration.
+
+  - id: SOP-007
+    category: vulnerable_groups
+    name: Elderly Cold Wave Warning
+    severity: high
+    activities:
+      - elderly
+      - senior citizens
+      - morning walk
+    conditions:
+      temperature_2m:
+        max: 5
+    advice: >
+      Freezing/cold temperatures (<= 5°C) pose hypothermia and cardiovascular risks for seniors.
+      Recommend staying indoors or wrapping up with multiple thermal layers.
+
+  - id: SOP-008
+    category: vulnerable_groups
+    name: Pets Extreme Heat Caution
+    severity: high
+    activities:
+      - pets
+      - dog walk
+      - pet walk
+      - animals
+    conditions:
+      temperature_2m:
+        min: 34
+    advice: >
+      Hot pavement and ambient heat (>= 34°C) can cause paw burns and heat stroke in pets.
+      Walk pets early in the morning or late evening when ground temperatures cool.
+
+  - id: SOP-009
+    category: recreation
+    name: Ideal Picnic Weather Policy
+    severity: low
+    activities:
+      - picnic
+      - outdoor gathering
+      - outdoor leisure
+      - park outing
+    conditions:
+      temperature_2m:
+        min: 18
+        max: 32
+      wind_speed_10m:
+        max: 25
+      precipitation_probability:
+        max: 30
+    advice: >
+      Weather conditions are within comfortable parameters (18-32°C, low wind <= 25 km/h, rain chance <= 30%).
+      Conditions are suitable for picnics and outdoor gatherings.
+
+  - id: SOP-010
+    category: recreation
+    name: High UV Outdoor Gathering Caution
+    severity: medium
+    activities:
+      - picnic
+      - outdoor gathering
+      - sunbathing
+      - beach
+    conditions:
+      uv_index:
+        min: 8
+    advice: >
+      Very high UV Index (>= 8) presents quick sunburn and skin damage hazards.
+      Wear broad-spectrum SPF 50+ sunscreen, hats, and seek shade during midday hours.
+
+  - id: SOP-011
+    category: outdoor_exercise
+    name: High UV Outdoor Exercise Notice
+    severity: medium
+    activities:
+      - cycling
+      - running
+      - hiking
+      - walking
+    conditions:
+      uv_index:
+        min: 8
+    advice: >
+      High UV radiation levels (>= 8). Protect exposed skin with UV-blocking apparel and sunscreen during outdoor exercise.
+
+  - id: SOP-012
+    category: travel
+    name: Two-Wheeler Rain Precaution
+    severity: medium
+    activities:
+      - two-wheeler
+      - scooter
+      - motorcycle
+      - biking
+    conditions:
+      precipitation_probability:
+        min: 60
+    advice: >
+      High likelihood of rain (>= 60%). Two-wheeler riders should carry rain wear and prepare for slippery road surfaces.
