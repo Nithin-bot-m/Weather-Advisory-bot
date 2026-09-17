@@ -2,6 +2,7 @@ from typing import List, Optional, Tuple, Dict, Any, Union
 from pydantic import BaseModel, Field
 from backend.app.models.weather import WeatherData
 from backend.app.models.sop import SOP, MatchedSOP, SeverityLevel
+from backend.app.policies.normalization import normalize_activity
 
 SEVERITY_ORDER = {
     SeverityLevel.HIGH: 3,
@@ -13,11 +14,17 @@ SEVERITY_ORDER = {
 class PolicyEvaluationResult(BaseModel):
     activity: str = Field(..., description="The query activity evaluated")
     weather: Any = Field(..., description="The weather data used for evaluation")
+    activity_sops: List[SOP] = Field(
+        default_factory=list, description="All SOPs that matched the requested activity"
+    )
     matched_sops: List[MatchedSOP] = Field(
         default_factory=list, description="All SOPs that matched activity and weather conditions"
     )
     selected_sop: Optional[MatchedSOP] = Field(
-        None, description="The highest severity SOP selected after tie-breaking"
+        None, description="The highest severity SOP selected after tie-breaking when conditions breach"
+    )
+    evaluated_sop: Optional[SOP] = Field(
+        None, description="Primary SOP policy evaluated for this activity"
     )
 
     @property
@@ -40,16 +47,15 @@ class PolicyEngine:
 
     def match_activity(self, sop: SOP, activity: str) -> bool:
         """
-        Deterministic case-insensitive activity matching.
-        Matches if input activity equals or is contained within any configured SOP activity keyword.
+        Deterministic case-insensitive normalized activity matching.
+        Matches if normalized input activity matches or relates to any configured SOP activity keyword.
         """
-        if not activity or not activity.strip():
+        if not activity or not str(activity).strip():
             return False
 
-        norm_act = activity.lower().strip()
+        norm_act = normalize_activity(activity)
         for target_act in sop.activities:
-            target_norm = target_act.lower().strip()
-            # Match exact string, or substring match (e.g. "cycling" in "bike cycling")
+            target_norm = normalize_activity(target_act)
             if norm_act == target_norm or target_norm in norm_act or norm_act in target_norm:
                 return True
         return False
@@ -97,26 +103,41 @@ class PolicyEngine:
     def evaluate(self, activity: str, weather: Any) -> PolicyEvaluationResult:
         """
         Evaluates all loaded SOPs for the given activity and weather data.
-        - Retains all matching SOPs.
+        - Identifies all SOPs relevant to the activity (activity_sops).
+        - Evaluates weather conditions for matching SOPs (matched_sops).
         - Selects highest severity (high > medium > low).
-        - Tie-breaking: SOP ID ascending for equal severity.
+        - Sets evaluated_sop to primary relevant SOP for traceability even when conditions do not breach.
         """
+        activity_sops: List[SOP] = []
         matched_results: List[MatchedSOP] = []
 
         for sop in self.sops:
             if self.match_activity(sop, activity):
+                activity_sops.append(sop)
                 is_match, matched_values = self.evaluate_conditions(sop, weather)
                 if is_match:
                     matched_results.append(
                         MatchedSOP(sop=sop, matched_conditions=matched_values)
                     )
 
+        # Determine primary evaluated SOP for the activity
+        evaluated_sop: Optional[SOP] = None
+        if activity_sops:
+            # Sort activity SOPs by severity descending (high > medium > low), then SOP ID ascending
+            sorted_activity_sops = sorted(
+                activity_sops,
+                key=lambda s: (-SEVERITY_ORDER.get(s.severity, 0), s.id),
+            )
+            evaluated_sop = sorted_activity_sops[0]
+
         if not matched_results:
             return PolicyEvaluationResult(
                 activity=activity,
                 weather=weather,
+                activity_sops=activity_sops,
                 matched_sops=[],
                 selected_sop=None,
+                evaluated_sop=evaluated_sop,
             )
 
         # Sort matches by severity descending (high > medium > low), then SOP ID ascending
@@ -130,6 +151,9 @@ class PolicyEngine:
         return PolicyEvaluationResult(
             activity=activity,
             weather=weather,
+            activity_sops=activity_sops,
             matched_sops=sorted_matches,
             selected_sop=selected,
+            evaluated_sop=selected.sop,
         )
+

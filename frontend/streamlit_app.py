@@ -53,6 +53,50 @@ with st.sidebar:
         "- **Orchestration**: LangGraph Workflow\n"
     )
 
+# Helper function to render metadata
+def render_metadata(meta: dict):
+    selected_sop = meta.get("selected_sop")
+    evaluated_sop = meta.get("evaluated_sop")
+    weather = meta.get("weather")
+    error = meta.get("error")
+
+    if error:
+        st.warning(f"⚠️ **Notice**: {error}")
+    elif selected_sop:
+        sop_id = selected_sop.get("id", "N/A")
+        sop_name = selected_sop.get("name", "N/A")
+        severity = str(selected_sop.get("severity", "N/A")).upper()
+
+        with st.expander(f"📋 **Matched Hazard Policy**: {sop_id} — {sop_name} ({severity})"):
+            st.markdown(f"**Category:** `{selected_sop.get('category', 'N/A')}`")
+            st.markdown(f"**Configured Advice:** {selected_sop.get('advice', 'N/A')}")
+            
+            if weather:
+                st.markdown("**Live Weather Facts:**")
+                cols = st.columns(3)
+                cols[0].metric("Temperature", f"{weather.get('temperature_2m')} °C")
+                cols[1].metric("Wind Speed", f"{weather.get('wind_speed_10m')} km/h")
+                cols[2].metric("Precipitation Prob", f"{weather.get('precipitation_probability')} %")
+    elif evaluated_sop:
+        sop_id = evaluated_sop.get("id", "N/A")
+        sop_name = evaluated_sop.get("name", "N/A")
+        severity = str(evaluated_sop.get("severity", "N/A")).upper()
+
+        with st.expander(f"📋 **Evaluated Policy (Safe Parameters)**: {sop_id} — {sop_name} ({severity})"):
+            st.markdown(f"**Category:** `{evaluated_sop.get('category', 'N/A')}`")
+            st.markdown(f"**Configured Policy Advice:** {evaluated_sop.get('advice', 'N/A')}")
+            st.markdown("✅ *Current weather conditions do not breach warning thresholds.*")
+
+            if weather:
+                st.markdown("**Live Weather Facts:**")
+                cols = st.columns(3)
+                cols[0].metric("Temperature", f"{weather.get('temperature_2m')} °C")
+                cols[1].metric("Wind Speed", f"{weather.get('wind_speed_10m')} km/h")
+                cols[2].metric("Precipitation Prob", f"{weather.get('precipitation_probability')} %")
+    else:
+        st.info("ℹ️ **No applicable SOP policy found for this activity/weather.**")
+
+
 # Render Chat History
 for msg in st.session_state.messages:
     with st.chat_message(msg["role"]):
@@ -60,30 +104,7 @@ for msg in st.session_state.messages:
 
         # Render metadata / SOP Traceability for assistant messages
         if msg["role"] == "assistant" and "metadata" in msg:
-            meta = msg["metadata"]
-            selected_sop = meta.get("selected_sop")
-            weather = meta.get("weather")
-            error = meta.get("error")
-
-            if error:
-                st.warning(f"⚠️ **Notice**: {error}")
-            elif selected_sop:
-                sop_id = selected_sop.get("id", "N/A")
-                sop_name = selected_sop.get("name", "N/A")
-                severity = str(selected_sop.get("severity", "N/A")).upper()
-
-                with st.expander(f"📋 **Matched Policy**: {sop_id} — {sop_name} ({severity})"):
-                    st.markdown(f"**Category:** `{selected_sop.get('category', 'N/A')}`")
-                    st.markdown(f"**Configured Advice:** {selected_sop.get('advice', 'N/A')}")
-                    
-                    if weather:
-                        st.markdown("**Live Weather Facts:**")
-                        cols = st.columns(3)
-                        cols[0].metric("Temperature", f"{weather.get('temperature_2m')} °C")
-                        cols[1].metric("Wind Speed", f"{weather.get('wind_speed_10m')} km/h")
-                        cols[2].metric("Precipitation Prob", f"{weather.get('precipitation_probability')} %")
-            else:
-                st.info("ℹ️ **No applicable SOP policy found for this activity/weather.**")
+            render_metadata(msg["metadata"])
 
 # Chat Input & Form Submission
 user_input = st.chat_input("Ask about outdoor activity safety (e.g., Can I cycle in Bhopal today?)")
@@ -119,39 +140,23 @@ if user_input:
             st.markdown(bot_reply)
 
             selected_sop = data.get("selected_sop")
+            evaluated_sop = data.get("evaluated_sop")
             weather = data.get("weather")
             error = data.get("error")
 
-            # Render SOP traceability under response
-            if error:
-                st.warning(f"⚠️ **Notice**: {error}")
-            elif selected_sop:
-                sop_id = selected_sop.get("id", "N/A")
-                sop_name = selected_sop.get("name", "N/A")
-                severity = str(selected_sop.get("severity", "N/A")).upper()
-
-                with st.expander(f"📋 **Matched Policy**: {sop_id} — {sop_name} ({severity})"):
-                    st.markdown(f"**Category:** `{selected_sop.get('category', 'N/A')}`")
-                    st.markdown(f"**Configured Advice:** {selected_sop.get('advice', 'N/A')}")
-                    
-                    if weather:
-                        st.markdown("**Live Weather Facts:**")
-                        cols = st.columns(3)
-                        cols[0].metric("Temperature", f"{weather.get('temperature_2m')} °C")
-                        cols[1].metric("Wind Speed", f"{weather.get('wind_speed_10m')} km/h")
-                        cols[2].metric("Precipitation Prob", f"{weather.get('precipitation_probability')} %")
-            else:
-                st.info("ℹ️ **No applicable SOP policy found for this activity/weather.**")
+            meta_dict = {
+                "selected_sop": selected_sop,
+                "evaluated_sop": evaluated_sop,
+                "weather": weather,
+                "error": error,
+            }
+            render_metadata(meta_dict)
 
             # Save assistant message with metadata
             st.session_state.messages.append({
                 "role": "assistant",
                 "content": bot_reply,
-                "metadata": {
-                    "selected_sop": selected_sop,
-                    "weather": weather,
-                    "error": error,
-                }
+                "metadata": meta_dict,
             })
         else:
             st.error(f"Backend returned error status {response.status_code}: {response.text}")

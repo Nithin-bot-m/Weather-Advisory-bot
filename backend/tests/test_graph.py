@@ -92,7 +92,9 @@ def test_unit_routers():
     assert route_after_weather({"error": None}) == "success"
 
     assert route_after_sop({"selected_sop": {"id": "SOP-001"}}) == "matched"
-    assert route_after_sop({"selected_sop": None}) == "no_match"
+    assert route_after_sop({"selected_sop": None, "evaluated_sop": {"id": "SOP-001"}}) == "matched"
+    assert route_after_sop({"selected_sop": None, "evaluated_sop": None}) == "no_match"
+
 
 
 def test_normal_graph_execution(mock_openai_intent_cycling_bhopal, mock_weather_data):

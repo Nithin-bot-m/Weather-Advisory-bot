@@ -21,6 +21,7 @@ class GraphState(TypedDict, total=False):
     # POLICY DECISION
     matching_sops: Optional[List[Dict[str, Any]]]
     selected_sop: Optional[Dict[str, Any]]
+    evaluated_sop: Optional[Dict[str, Any]]
 
     # OUTPUT
     response: Optional[str]

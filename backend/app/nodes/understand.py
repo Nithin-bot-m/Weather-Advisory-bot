@@ -15,14 +15,18 @@ Your only task is to extract:
 * location
 * requested time context
 
+Guidelines:
+1. Extract outdoor activity, location, and time context from the user's question.
+2. If the user asks a follow-up question (e.g., "What about this evening?", "How about tomorrow?"), recover the activity and location from the prior conversation history.
+3. If the user's input is a standalone greeting (e.g., "hi", "hello", "hey") without any activity or location inquiry, return null for activity, location, and time_context.
+
 Do NOT provide advice.
 Do NOT evaluate safety.
 Do NOT evaluate weather.
 Do NOT select an SOP.
 Do NOT invent weather.
-Do NOT invent policies.
+Do NOT invent policies."""
 
-If a value is not present or cannot be reliably inferred from the conversation, return null."""
 
 
 class UserIntent(BaseModel):
@@ -40,53 +44,85 @@ class UserIntent(BaseModel):
     )
 
 
+from backend.app.policies.normalization import normalize_activity
+import re
+
+GREETINGS = {"hi", "hello", "hey", "greetings", "good morning", "good afternoon", "good evening", "hi there", "hello there"}
+
+
+KNOWN_CANONICAL_ACTIVITIES = {
+    "cycling", "running", "hiking", "driving", "picnic",
+    "children", "elderly", "pets", "two-wheeler", "sunbathing",
+    "beach", "flying a kite", "travel", "stargazing"
+}
+
+
+
+def extract_activity_from_text(text: str) -> Optional[str]:
+    if any(k in text for k in ["cycling", "bike", "biking", "bicycle", "two-wheeler", "ride"]):
+        return "cycling"
+    elif any(k in text for k in ["picnic", "outdoor gathering", "park outing", "outdoors"]):
+        return "picnic"
+    elif any(k in text for k in ["running", "jogging", "marathon"]):
+        return "running"
+    elif any(k in text for k in ["hiking", "trekking", "trail"]):
+        return "hiking"
+    elif any(k in text for k in ["driving", "commuting", "highway"]):
+        return "driving"
+    elif any(k in text for k in ["kite", "flying a kite"]):
+        return "flying a kite"
+    else:
+        norm = normalize_activity(text)
+        if norm in KNOWN_CANONICAL_ACTIVITIES:
+            return norm
+    return None
+
+
+
+def extract_location_from_text(text: str) -> Optional[str]:
+    if "bhopal" in text:
+        return "Bhopal"
+    elif "bengaluru" in text or "bangalore" in text:
+        return "Bengaluru"
+    elif "mumbai" in text:
+        return "Mumbai"
+    elif "delhi" in text:
+        return "Delhi"
+    elif "xyz_nonexistent_city" in text:
+        return "XYZ_NONEXISTENT_CITY_12345"
+    return None
+
+
 def heuristic_intent_extraction(user_question: str, messages_history: List[Dict[str, Any]]) -> UserIntent:
     """
     Rule-based intent extraction fallback for offline execution or when OPENAI_API_KEY is unset.
     """
-    combined_text = user_question
-    for msg in messages_history:
-        if isinstance(msg, dict):
-            combined_text += " " + str(msg.get("content", ""))
+    q_clean = user_question.lower().strip()
+    q_alpha = re.sub(r"[^\w\s]", "", q_clean).strip()
 
-    combined_lower = combined_text.lower()
+    if q_alpha in GREETINGS:
+        return UserIntent(activity=None, location=None, time_context=None)
 
-    # Activity extraction
-    activity = None
-    if any(k in combined_lower for k in ["cycling", "bike", "biking", "bicycle", "two-wheeler"]):
-        activity = "cycling"
-    elif any(k in combined_lower for k in ["picnic", "outdoor gathering", "park outing", "outdoors"]):
-        activity = "picnic"
-    elif any(k in combined_lower for k in ["running", "jogging", "marathon"]):
-        activity = "running"
-    elif any(k in combined_lower for k in ["hiking", "trekking", "trail"]):
-        activity = "hiking"
-    elif any(k in combined_lower for k in ["driving", "commuting", "highway"]):
-        activity = "driving"
-    elif any(k in combined_lower for k in ["kite", "flying a kite"]):
-        activity = "flying a kite"
+    # 1. Search current question first
+    activity = extract_activity_from_text(q_clean)
+    location = extract_location_from_text(q_clean)
 
-    # Location extraction
-    location = None
-    if "bhopal" in combined_lower:
-        location = "Bhopal"
-    elif "bengaluru" in combined_lower or "bangalore" in combined_lower:
-        location = "Bengaluru"
-    elif "mumbai" in combined_lower:
-        location = "Mumbai"
-    elif "delhi" in combined_lower:
-        location = "Delhi"
-    elif "xyz_nonexistent_city" in combined_lower:
-        location = "XYZ_NONEXISTENT_CITY_12345"
-
-    # Time context extraction
     time_context = None
-    if "evening" in combined_lower or "this evening" in combined_lower:
+    if "evening" in q_clean or "this evening" in q_clean:
         time_context = "evening"
-    elif "today" in combined_lower:
+    elif "today" in q_clean:
         time_context = "today"
-    elif "tomorrow" in combined_lower:
+    elif "tomorrow" in q_clean:
         time_context = "tomorrow"
+
+    # 2. Recover missing fields from context if question is a follow-up
+    if not activity or not location:
+        history_text = " ".join([str(m.get("content", "")) for m in messages_history if isinstance(m, dict)])
+        h_lower = history_text.lower()
+        if not activity:
+            activity = extract_activity_from_text(h_lower)
+        if not location:
+            location = extract_location_from_text(h_lower)
 
     return UserIntent(activity=activity, location=location, time_context=time_context)
 
@@ -98,6 +134,16 @@ async def understand_question(state: GraphState) -> Dict[str, Any]:
     """
     user_question = state.get("user_question", "")
     messages_history = state.get("messages", [])
+
+    q_clean = user_question.lower().strip()
+    q_alpha = re.sub(r"[^\w\s]", "", q_clean).strip()
+    if q_alpha in GREETINGS:
+        return {
+            "activity": None,
+            "location": None,
+            "time_context": None,
+            "error": None,
+        }
 
     formatted_messages = [SystemMessage(content=INTENT_SYSTEM_PROMPT)]
 
@@ -128,8 +174,10 @@ async def understand_question(state: GraphState) -> Dict[str, Any]:
             intent: UserIntent = await structured_llm.ainvoke(formatted_messages)
 
             if intent and (intent.activity or intent.location or intent.time_context):
+                raw_act = intent.activity if intent and intent.activity else None
+                norm_act = normalize_activity(raw_act) if raw_act else None
                 return {
-                    "activity": intent.activity if intent and intent.activity else None,
+                    "activity": norm_act or raw_act,
                     "location": intent.location if intent and intent.location else None,
                     "time_context": intent.time_context if intent and intent.time_context else None,
                     "error": None,
@@ -146,5 +194,7 @@ async def understand_question(state: GraphState) -> Dict[str, Any]:
         "time_context": fallback_intent.time_context,
         "error": None,
     }
+
+
 
 

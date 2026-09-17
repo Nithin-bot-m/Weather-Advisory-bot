@@ -168,3 +168,62 @@ sops:
     assert result.has_match
     assert result.selected_sop.sop.id == "SOP-013"
     assert result.selected_sop.sop.name == "Stargazing Night Sky Warning"
+
+
+def test_cycling_phrasing_variations_normalize(engine):
+    # Regression test for Step 4 phrasing variations
+    variations = [
+        "cycle",
+        "cycling",
+        "bicycle",
+        "bicycling",
+        "bike ride",
+        "ride my bike",
+        "riding a bike",
+        "take my bicycle out",
+        "taking my bicycle out for a ride",
+        "bicycle ride",
+    ]
+    weather = WeatherData(
+        temperature_2m=25.0,
+        wind_speed_10m=45.0,  # High wind triggers SOP-001
+        precipitation=0.0,
+        precipitation_probability=10.0,
+        uv_index=5.0,
+    )
+    for var in variations:
+        res = engine.evaluate(activity=var, weather=weather)
+        assert res.evaluated_sop is not None, f"Failed evaluated_sop for variation: {var}"
+        assert res.evaluated_sop.id == "SOP-001", f"Failed SOP-001 mapping for variation: {var}"
+        assert res.has_match, f"Failed hazard match for variation: {var}"
+        assert res.selected_sop.sop.id == "SOP-001"
+
+
+def test_cycling_safe_weather_distinction(engine):
+    # Situation B: SOP exists, but weather is safe (wind = 15 km/h < 40 km/h)
+    weather = WeatherData(
+        temperature_2m=25.0,
+        wind_speed_10m=15.0,
+        precipitation=0.0,
+        precipitation_probability=10.0,
+        uv_index=3.0,
+    )
+    res = engine.evaluate(activity="bicycling", weather=weather)
+    assert res.selected_sop is None  # No threshold breach
+    assert res.evaluated_sop is not None  # SOP-001 evaluated
+    assert res.evaluated_sop.id == "SOP-001"
+
+
+def test_unrelated_activity_no_sop_match(engine):
+    # Situation A: No SOP exists for activity
+    weather = WeatherData(
+        temperature_2m=25.0,
+        wind_speed_10m=15.0,
+        precipitation=0.0,
+        precipitation_probability=10.0,
+        uv_index=3.0,
+    )
+    res = engine.evaluate(activity="flying a kite", weather=weather)
+    assert res.selected_sop is None
+    assert res.evaluated_sop is None
+

@@ -25,5 +25,6 @@ class ChatResponse(BaseModel):
     time_context: Optional[str] = Field(None, description="Extracted time context (e.g. today, evening)")
     resolved_location: Optional[Dict[str, Any]] = Field(None, description="Resolved geographical coordinates")
     weather: Optional[Dict[str, Any]] = Field(None, description="Live weather data")
-    selected_sop: Optional[Dict[str, Any]] = Field(None, description="Authoritative matched SOP policy")
+    selected_sop: Optional[Dict[str, Any]] = Field(None, description="Authoritative matched SOP policy (hazard triggered)")
+    evaluated_sop: Optional[Dict[str, Any]] = Field(None, description="Authoritative evaluated SOP policy for activity")
     error: Optional[str] = Field(None, description="Error message if processing failed")

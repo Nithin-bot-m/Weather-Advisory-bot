@@ -32,18 +32,13 @@ async def match_sops(state: GraphState) -> Dict[str, Any]:
         return {
             "matching_sops": [],
             "selected_sop": None,
+            "evaluated_sop": None,
         }
 
     try:
         weather_obj = WeatherData(**weather_dict)
         engine = get_policy_engine()
         result = engine.evaluate(activity=activity, weather=weather_obj)
-
-        if not result.has_match or not result.selected_sop:
-            return {
-                "matching_sops": [],
-                "selected_sop": None,
-            }
 
         matching_sops_list = []
         for matched in result.matched_sops:
@@ -56,34 +51,50 @@ async def match_sops(state: GraphState) -> Dict[str, Any]:
                 "matched_conditions": matched.matched_conditions,
             })
 
-        sel = result.selected_sop
-        selected_sop_dict = {
-            "id": sel.sop.id,
-            "name": sel.sop.name,
-            "category": sel.sop.category,
-            "severity": sel.sop.severity.value if hasattr(sel.sop.severity, "value") else str(sel.sop.severity),
-            "advice": sel.sop.advice,
-            "matched_conditions": sel.matched_conditions,
-        }
+        selected_sop_dict = None
+        if result.selected_sop:
+            sel = result.selected_sop
+            selected_sop_dict = {
+                "id": sel.sop.id,
+                "name": sel.sop.name,
+                "category": sel.sop.category,
+                "severity": sel.sop.severity.value if hasattr(sel.sop.severity, "value") else str(sel.sop.severity),
+                "advice": sel.sop.advice,
+                "matched_conditions": sel.matched_conditions,
+            }
+
+        evaluated_sop_dict = None
+        if result.evaluated_sop:
+            ev = result.evaluated_sop
+            evaluated_sop_dict = {
+                "id": ev.id,
+                "name": ev.name,
+                "category": ev.category,
+                "severity": ev.severity.value if hasattr(ev.severity, "value") else str(ev.severity),
+                "advice": ev.advice,
+            }
 
         return {
             "matching_sops": matching_sops_list,
             "selected_sop": selected_sop_dict,
+            "evaluated_sop": evaluated_sop_dict,
         }
     except Exception as exc:
         return {
             "error": f"SOP evaluation failed: {str(exc)}",
             "matching_sops": [],
             "selected_sop": None,
+            "evaluated_sop": None,
         }
 
 
 def route_after_sop(state: GraphState) -> str:
     """
     Conditional router after SOP matching.
-    Returns 'matched' if selected_sop is present, otherwise 'no_match'.
+    Returns 'matched' if either selected_sop or evaluated_sop is present, otherwise 'no_match'.
     """
-    if state.get("selected_sop"):
+    if state.get("selected_sop") or state.get("evaluated_sop"):
         return "matched"
     return "no_match"
+
 

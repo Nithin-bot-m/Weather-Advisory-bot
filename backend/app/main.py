@@ -78,8 +78,10 @@ async def chat_endpoint(request: ChatRequest):
         resolved_location=final_state.get("resolved_location"),
         weather=final_state.get("weather"),
         selected_sop=final_state.get("selected_sop"),
+        evaluated_sop=final_state.get("evaluated_sop"),
         error=error_msg,
     )
+
 
 
 @app.post("/session/{session_id}/reset")

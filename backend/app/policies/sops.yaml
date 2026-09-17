@@ -195,3 +195,19 @@ sops:
         min: 60
     advice: >
       High likelihood of rain (>= 60%). Two-wheeler riders should carry rain wear and prepare for slippery road surfaces.
+
+  - id: SOP-013
+    category: recreation
+    name: Stargazing Night Sky Advisory
+    severity: medium
+    activities:
+      - stargazing
+      - night sky
+      - astronomy
+      - telescope
+    conditions:
+      precipitation_probability:
+        min: 50
+    advice: >
+      High cloud cover / precipitation probability (>= 50%) obstructs night sky visibility for stargazing.
+
