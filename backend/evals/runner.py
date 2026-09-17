@@ -533,6 +533,56 @@ async def evaluate_case_010(case) -> Dict[str, Any]:
         }
 
 
+async def evaluate_case_011(case) -> Dict[str, Any]:
+    """EVAL-011 — Situational Weather Override (Mocked 65 km/h wind system)"""
+    try:
+        mock_weather = WeatherData(
+            temperature_2m=28.0,
+            wind_speed_10m=65.0,  # >= 60 km/h triggers SOP-014 situational override
+            precipitation=0.0,
+            precipitation_probability=10.0,
+            uv_index=4.0,
+        )
+        with patch("backend.app.nodes.weather.fetch_weather_forecast", new_callable=AsyncMock) as mock_fetch:
+            mock_fetch.return_value = mock_weather
+            res = await graph.ainvoke({"user_question": case.user_message, "messages": []})
+
+        sop = res.get("selected_sop")
+        if sop and sop.get("id") == "SOP-014" and sop.get("category") == "situational_weather":
+            return {
+                "case_id": case.case_id,
+                "category": case.category,
+                "evaluation_type": case.evaluation_type,
+                "status": "PASS",
+                "input": case.user_message,
+                "expected": case.expected_behavior,
+                "actual": f"Selected situational override SOP '{sop.get('id')}' ({sop.get('name')}) under mocked wind=65.0 km/h.",
+                "notes": "DETERMINISTIC / MOCKED: Successfully verified situational override SOP-014 precedence over activity SOPs.",
+            }
+        else:
+            return {
+                "case_id": case.case_id,
+                "category": case.category,
+                "evaluation_type": case.evaluation_type,
+                "status": "FAIL",
+                "input": case.user_message,
+                "expected": case.expected_behavior,
+                "actual": f"selected_sop={sop.get('id') if sop else None}",
+                "notes": "Failed to prioritize situational override SOP-014 under severe weather conditions.",
+            }
+    except Exception as exc:
+        return {
+            "case_id": case.case_id,
+            "category": case.category,
+            "evaluation_type": case.evaluation_type,
+            "status": "ERROR",
+            "input": case.user_message,
+            "expected": case.expected_behavior,
+            "actual": str(exc),
+            "notes": f"Mock evaluation exception: {exc}",
+        }
+
+
 async def run_evaluation():
     """Run all evaluation cases and generate results.json and README.md"""
     print("=" * 60)
@@ -564,6 +614,8 @@ async def run_evaluation():
             res = await evaluate_case_009(case)
         elif case.case_id == "EVAL-010":
             res = await evaluate_case_010(case)
+        elif case.case_id == "EVAL-011":
+            res = await evaluate_case_011(case)
         else:
             res = {
                 "case_id": case.case_id,
@@ -642,6 +694,8 @@ async def run_evaluation():
 | Adversarial prompt injection | `EVAL-008` | LIVE | `{next(r['status'] for r in results if r['case_id']=='EVAL-008')}` |
 | Session context | `EVAL-009` | LIVE | `{next(r['status'] for r in results if r['case_id']=='EVAL-009')}` |
 | Session isolation | `EVAL-010` | LIVE | `{next(r['status'] for r in results if r['case_id']=='EVAL-010')}` |
+| Situational weather override | `EVAL-011` | MOCKED | `{next(r['status'] for r in results if r['case_id']=='EVAL-011')}` |
+
 
 ---
 

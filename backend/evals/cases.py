@@ -109,4 +109,13 @@ EVAL_CASES: List[EvalCase] = [
         expected_behavior="Session A (cycling in Bhopal) and Session B (picnic in Bengaluru) maintain completely independent histories with zero cross-session context leakage.",
         evaluation_type="live",
     ),
+    EvalCase(
+        case_id="EVAL-011",
+        category="situational_override",
+        description="Situational Weather Override — Mocked 65 km/h wind system",
+        user_message="Can I go cycling in Bhopal today?",
+        expected_behavior="Evaluates cycling under extreme 65 km/h wind. SOP-014 (Situational Severe Weather System Override) must outrank activity SOP-001 and be selected.",
+        evaluation_type="mocked",
+    ),
 ]
+

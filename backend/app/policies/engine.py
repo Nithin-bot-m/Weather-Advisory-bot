@@ -56,14 +56,14 @@ class PolicyEngine:
         norm_act = normalize_activity(activity)
         for target_act in sop.activities:
             target_norm = normalize_activity(target_act)
-            if norm_act == target_norm or target_norm in norm_act or norm_act in target_norm:
+            if target_norm in ("all", "outdoor", "general", "situational") or norm_act == target_norm or target_norm in norm_act or norm_act in target_norm:
                 return True
         return False
 
     def evaluate_conditions(self, sop: SOP, weather: Any) -> Tuple[bool, Dict[str, float]]:
         """
         Evaluates weather data against SOP conditions.
-        - ALL conditions must pass (AND logic).
+        - Supports numeric threshold mode (AND logic) and fuzzy suitability score mode.
         - If a required weather field is missing/None, evaluation FAILS (no fabrication of missing data).
         """
         matched_values: Dict[str, float] = {}
@@ -71,6 +71,62 @@ class PolicyEngine:
         if not sop.conditions:
             return False, {}
 
+        # Handle fuzzy continuous evaluation if requested by SOP schema
+        if getattr(sop, "eval_type", "numeric") == "fuzzy":
+            scores: List[float] = []
+            for field_name, threshold in sop.conditions.items():
+                weather_val = None
+                if isinstance(weather, dict):
+                    weather_val = weather.get(field_name)
+                elif hasattr(weather, field_name):
+                    weather_val = getattr(weather, field_name)
+
+                if weather_val is None:
+                    return False, {}
+
+                try:
+                    val_float = float(weather_val)
+                except (ValueError, TypeError):
+                    return False, {}
+
+                matched_values[field_name] = val_float
+
+                # Compute continuous parameter comfort score between 0.0 and 1.0
+                min_v = threshold.min
+                max_v = threshold.max
+                if min_v is not None and max_v is not None:
+                    mid = (min_v + max_v) / 2.0
+                    span = max((max_v - min_v) / 2.0, 1.0)
+                    if min_v <= val_float <= max_v:
+                        param_score = 1.0 - 0.3 * (abs(val_float - mid) / span)
+                    elif val_float < min_v:
+                        param_score = max(0.0, 0.7 - 0.7 * (min_v - val_float) / max(min_v, 1.0))
+                    else:
+                        param_score = max(0.0, 0.7 - 0.7 * (val_float - max_v) / max(max_v, 1.0))
+                elif max_v is not None:
+                    if val_float <= max_v:
+                        param_score = 1.0 - 0.5 * (val_float / max(max_v, 1.0))
+                    else:
+                        param_score = max(0.0, 0.5 - 0.5 * (val_float - max_v) / max(max_v, 1.0))
+                elif min_v is not None:
+                    if val_float >= min_v:
+                        param_score = 1.0
+                    else:
+                        param_score = max(0.0, val_float / max(min_v, 1.0))
+                else:
+                    param_score = 1.0
+
+                scores.append(param_score)
+
+            if not scores:
+                return False, {}
+
+            overall_suitability = sum(scores) / len(scores)
+            matched_values["suitability_score"] = round(overall_suitability, 2)
+            req_threshold = sop.suitability_threshold if sop.suitability_threshold is not None else 0.70
+            return (overall_suitability >= req_threshold), matched_values
+
+        # Standard numeric evaluation
         for field_name, threshold in sop.conditions.items():
             # Support both object attributes and dictionary keys
             weather_val = None
@@ -105,17 +161,23 @@ class PolicyEngine:
         Evaluates all loaded SOPs for the given activity and weather data.
         - Identifies all SOPs relevant to the activity (activity_sops).
         - Evaluates weather conditions for matching SOPs (matched_sops).
-        - Selects highest severity (high > medium > low).
-        - Sets evaluated_sop to primary relevant SOP for traceability even when conditions do not breach.
+        - Situational override SOPs apply when their atmospheric conditions breach.
+        - Selects highest priority match (situational override > high > medium > low).
+        - Sets evaluated_sop to primary relevant activity SOP for traceability even when conditions do not breach.
         """
         activity_sops: List[SOP] = []
         matched_results: List[MatchedSOP] = []
 
         for sop in self.sops:
-            if self.match_activity(sop, activity):
+            is_override = getattr(sop, "situational_override", False)
+            is_act_match = self.match_activity(sop, activity)
+
+            if is_act_match and not is_override:
                 activity_sops.append(sop)
-                is_match, matched_values = self.evaluate_conditions(sop, weather)
-                if is_match:
+
+            if is_act_match or is_override:
+                is_condition_match, matched_values = self.evaluate_conditions(sop, weather)
+                if is_condition_match:
                     matched_results.append(
                         MatchedSOP(sop=sop, matched_conditions=matched_values)
                     )
@@ -126,7 +188,10 @@ class PolicyEngine:
             # Sort activity SOPs by severity descending (high > medium > low), then SOP ID ascending
             sorted_activity_sops = sorted(
                 activity_sops,
-                key=lambda s: (-SEVERITY_ORDER.get(s.severity, 0), s.id),
+                key=lambda s: (
+                    -SEVERITY_ORDER.get(s.severity, 0),
+                    s.id,
+                ),
             )
             evaluated_sop = sorted_activity_sops[0]
 
@@ -140,10 +205,11 @@ class PolicyEngine:
                 evaluated_sop=evaluated_sop,
             )
 
-        # Sort matches by severity descending (high > medium > low), then SOP ID ascending
+        # Sort matches by situational override descending, then severity descending, then SOP ID ascending
         def sort_key(matched: MatchedSOP):
+            override_flag = 1 if getattr(matched.sop, "situational_override", False) else 0
             severity_rank = SEVERITY_ORDER.get(matched.sop.severity, 0)
-            return (-severity_rank, matched.sop.id)
+            return (-override_flag, -severity_rank, matched.sop.id)
 
         sorted_matches = sorted(matched_results, key=sort_key)
         selected = sorted_matches[0]
@@ -154,6 +220,6 @@ class PolicyEngine:
             activity_sops=activity_sops,
             matched_sops=sorted_matches,
             selected_sop=selected,
-            evaluated_sop=selected.sop,
+            evaluated_sop=selected.sop if not evaluated_sop else evaluated_sop,
         )
 

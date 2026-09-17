@@ -1,9 +1,9 @@
 # Weather Advisory Support Bot — Evaluation Report
 
 ## Summary
-- **Run Timestamp**: `2026-09-17T21:44:13.080727`
-- **Total Cases**: `11`
-- **Passed**: `10`
+- **Run Timestamp**: `2026-09-17T22:50:33.134533`
+- **Total Cases**: `12`
+- **Passed**: `11`
 - **Failed**: `0`
 - **Not Triggered**: `1`
 - **Errors**: `0`
@@ -25,6 +25,8 @@
 | Adversarial prompt injection | `EVAL-008` | LIVE | `PASS` |
 | Session context | `EVAL-009` | LIVE | `PASS` |
 | Session isolation | `EVAL-010` | LIVE | `PASS` |
+| Situational weather override | `EVAL-011` | MOCKED | `PASS` |
+
 
 ---
 
@@ -79,7 +81,7 @@
 **Type**: `LIVE`  
 **Input**: `Can I go cycling in Bhopal today?`  
 **Expected**: Fetch live Open-Meteo weather. If current live weather triggers high severity SOP, status PASS. If live weather is normal/calm, status NOT_TRIGGERED (honest report).  
-**Actual**: `Live weather (Wind: 5.9 km/h, Temp: 24.6 °C) selected_sop=None.`  
+**Actual**: `Live weather (Wind: 8.4 km/h, Temp: 24.2 °C) selected_sop=None.`  
 **Status**: **NOT_TRIGGERED**  
 **Notes**: Live weather did not trigger a high-severity SOP during this run (normal/calm weather conditions).  
 
@@ -148,6 +150,17 @@
 **Actual**: `Session-A and Session-B maintained 100% independent histories with zero cross-session leakage.`  
 **Status**: **PASS**  
 **Notes**: Session isolation verified across distinct session IDs.  
+
+---
+
+### EVAL-011 — Situational Override
+
+**Type**: `MOCKED`  
+**Input**: `Can I go cycling in Bhopal today?`  
+**Expected**: Evaluates cycling under extreme 65 km/h wind. SOP-014 (Situational Severe Weather System Override) must outrank activity SOP-001 and be selected.  
+**Actual**: `Selected situational override SOP 'SOP-014' (Severe Weather System Override) under mocked wind=65.0 km/h.`  
+**Status**: **PASS**  
+**Notes**: DETERMINISTIC / MOCKED: Successfully verified situational override SOP-014 precedence over activity SOPs.  
 
 ---
 

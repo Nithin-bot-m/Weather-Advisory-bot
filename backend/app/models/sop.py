@@ -29,6 +29,9 @@ class SOP(BaseModel):
     activities: List[str] = Field(..., description="List of activity names/keywords matching this policy")
     conditions: Dict[str, FieldThreshold] = Field(..., description="Weather field threshold conditions")
     advice: str = Field(..., description="Configured safety advice string")
+    situational_override: bool = Field(False, description="Whether this SOP is a broad situational override policy")
+    eval_type: str = Field("numeric", description="Evaluation mode: numeric or fuzzy")
+    suitability_threshold: Optional[float] = Field(None, description="Minimum suitability score for fuzzy SOPs")
 
     @field_validator("activities")
     def validate_activities(cls, v):

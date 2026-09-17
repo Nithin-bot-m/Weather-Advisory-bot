@@ -227,3 +227,51 @@ def test_unrelated_activity_no_sop_match(engine):
     assert res.selected_sop is None
     assert res.evaluated_sop is None
 
+
+def test_situational_override_outranks_activity_sop(engine):
+    # Severe wind (65 km/h) triggers SOP-014 situational override as well as SOP-001 cycling
+    weather = WeatherData(
+        temperature_2m=25.0,
+        wind_speed_10m=65.0,
+        precipitation=0.0,
+        precipitation_probability=10.0,
+        uv_index=4.0,
+    )
+    res = engine.evaluate(activity="cycling", weather=weather)
+    assert res.has_match
+    assert res.selected_sop is not None
+    assert res.selected_sop.sop.id == "SOP-014"
+    assert res.selected_sop.sop.situational_override is True
+    assert res.selected_sop.sop.category == "situational_weather"
+
+
+def test_fuzzy_picnic_suitability(engine):
+    # Comfortable picnic weather
+    weather_good = WeatherData(
+        temperature_2m=25.0,
+        wind_speed_10m=10.0,
+        precipitation=0.0,
+        precipitation_probability=5.0,
+        uv_index=4.0,
+    )
+    res_good = engine.evaluate(activity="picnic", weather=weather_good)
+    assert res_good.has_match
+    matched_ids = [m.sop.id for m in res_good.matched_sops]
+    assert "SOP-009" in matched_ids
+    sop9_match = [m for m in res_good.matched_sops if m.sop.id == "SOP-009"][0]
+    assert "suitability_score" in sop9_match.matched_conditions
+    assert sop9_match.matched_conditions["suitability_score"] >= 0.70
+
+    # Poor picnic weather
+    weather_poor = WeatherData(
+        temperature_2m=38.0,
+        wind_speed_10m=35.0,
+        precipitation=15.0,
+        precipitation_probability=70.0,
+        uv_index=10.0,
+    )
+    res_poor = engine.evaluate(activity="picnic", weather=weather_poor)
+    matched_ids_poor = [m.sop.id for m in res_poor.matched_sops]
+    assert "SOP-009" not in matched_ids_poor
+
+

@@ -133,6 +133,8 @@ sops:
     category: recreation
     name: Ideal Picnic Weather Policy
     severity: low
+    eval_type: fuzzy
+    suitability_threshold: 0.70
     activities:
       - picnic
       - outdoor gathering
@@ -147,7 +149,7 @@ sops:
       precipitation_probability:
         max: 30
     advice: >
-      Weather conditions are within comfortable parameters (18-32°C, low wind <= 25 km/h, rain chance <= 30%).
+      Weather conditions evaluate to a high outdoor comfort index (>= 0.70 suitability score based on temperature, wind, and rain probability).
       Conditions are suitable for picnics and outdoor gatherings.
 
   - id: SOP-010
@@ -210,4 +212,23 @@ sops:
         min: 50
     advice: >
       High cloud cover / precipitation probability (>= 50%) obstructs night sky visibility for stargazing.
+
+  - id: SOP-014
+    category: situational_weather
+    name: Severe Weather System Override
+    severity: high
+    situational_override: true
+    activities:
+      - all
+      - outdoor
+      - general
+      - situational
+      - severe weather
+    conditions:
+      wind_speed_10m:
+        min: 60
+    advice: >
+      Severe weather system alert: Extreme wind conditions (>= 60 km/h) threaten safety across all outdoor activities.
+      All outdoor activity recommendations are overridden; stay indoors and take safety precautions immediately.
+
 
