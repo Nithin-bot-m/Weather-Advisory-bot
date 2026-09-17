@@ -91,6 +91,7 @@ def test_unit_routers():
     assert route_after_weather({"error": "Timeout"}) == "error"
     assert route_after_weather({"error": None}) == "success"
 
+    assert route_after_sop({"selected_sop": {"id": "SOP-014", "situational_override": True}}) == "situational_override"
     assert route_after_sop({"selected_sop": {"id": "SOP-001"}}) == "matched"
     assert route_after_sop({"selected_sop": None, "evaluated_sop": {"id": "SOP-001"}}) == "matched"
     assert route_after_sop({"selected_sop": None, "evaluated_sop": None}) == "no_match"
@@ -270,5 +271,37 @@ def test_session_context_recovery():
             assert res["time_context"] == "evening"
 
     asyncio.run(run_test())
+
+
+def test_situational_override_graph_execution(mock_openai_intent_cycling_bhopal):
+    """
+    Test situational override execution branch through graph:
+    match_sops -> situational_override_response -> END
+    """
+    async def run_test():
+        mock_severe_weather = WeatherData(
+            temperature_2m=28.0,
+            wind_speed_10m=65.0,  # >= 60 km/h triggers SOP-014 situational override
+            precipitation=0.0,
+            precipitation_probability=10.0,
+            uv_index=4.0,
+        )
+        with patch("os.getenv", side_effect=lambda k, d=None: "mock-key" if k == "OPENAI_API_KEY" else d), \
+             patch("backend.app.nodes.weather.fetch_weather_forecast", new_callable=AsyncMock) as mock_fetch:
+            mock_fetch.return_value = mock_severe_weather
+            initial_state: GraphState = {
+                "user_question": "Can I cycle in Bhopal today?",
+                "messages": []
+            }
+
+            final_state = await graph.ainvoke(initial_state)
+
+            assert final_state.get("selected_sop") is not None
+            assert final_state["selected_sop"]["id"] == "SOP-014"
+            assert final_state["selected_sop"]["situational_override"] is True
+            assert "Severe Weather System Override" in final_state.get("response", "") or "SOP-014" in final_state.get("response", "")
+
+    asyncio.run(run_test())
+
 
 

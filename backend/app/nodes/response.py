@@ -140,3 +140,66 @@ async def error_response(state: GraphState) -> Dict[str, Any]:
         "response": f"Unable to process weather advisory request: {error_msg}",
     }
 
+
+async def situational_override_response(state: GraphState) -> Dict[str, Any]:
+    """
+    Dedicated node for situational weather override handling.
+    Executes when a severe situational weather policy (e.g. SOP-014) breaches and outranks ordinary activity SOPs.
+    """
+    user_question = state.get("user_question", "")
+    weather = state.get("weather", {})
+    location = state.get("resolved_location", {})
+    selected_sop = state.get("selected_sop") or {}
+
+    system_prompt = """You are a situational-override response component in a policy-controlled weather advisory system.
+
+A severe situational weather policy (SOP-014: Severe Weather System Override) has triggered and takes total precedence over ordinary activity-specific advice.
+
+You must:
+1. Lead directly with the severe weather system override warning.
+2. State clearly that the situational policy outranks ordinary activity guidance.
+3. Cite the SOP ID (SOP-014) and SOP Name (Severe Weather System Override).
+4. Rely strictly on the provided factual weather values.
+
+Do not invent weather. Do not estimate weather."""
+
+    context_prompt = f"""TRUSTED LOCATION:
+{json.dumps(location, indent=2)}
+
+TRUSTED WEATHER:
+{json.dumps(weather, indent=2)}
+
+SITUATIONAL OVERRIDE SOP:
+{json.dumps(selected_sop, indent=2)}
+
+USER QUESTION:
+{user_question}"""
+
+    api_key = os.getenv("OPENAI_API_KEY")
+    if not api_key:
+        sop_id = selected_sop.get("id", "SOP-014")
+        sop_name = selected_sop.get("name", "Severe Weather System Override")
+        advice = selected_sop.get("advice", "")
+        return {
+            "response": f"[{sop_id}: {sop_name}] {advice.strip()}"
+        }
+
+    try:
+        model_name = os.getenv("OPENAI_MODEL", "gpt-4o-mini")
+        llm = ChatOpenAI(model=model_name, temperature=0, api_key=api_key)
+        messages = [
+            SystemMessage(content=system_prompt),
+            HumanMessage(content=context_prompt),
+        ]
+        res = await llm.ainvoke(messages)
+        return {
+            "response": res.content,
+        }
+    except Exception as exc:
+        sop_id = selected_sop.get("id", "SOP-014")
+        sop_name = selected_sop.get("name", "Severe Weather System Override")
+        advice = selected_sop.get("advice", "")
+        return {
+            "response": f"[{sop_id}: {sop_name}] {advice.strip()} (Response generation fallback: {exc})"
+        }
+

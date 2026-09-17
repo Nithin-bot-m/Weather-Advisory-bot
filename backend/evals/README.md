@@ -1,7 +1,7 @@
 # Weather Advisory Support Bot — Evaluation Report
 
 ## Summary
-- **Run Timestamp**: `2026-09-17T22:50:33.134533`
+- **Run Timestamp**: `2026-09-17T23:14:42.181271`
 - **Total Cases**: `12`
 - **Passed**: `11`
 - **Failed**: `0`
@@ -81,7 +81,7 @@
 **Type**: `LIVE`  
 **Input**: `Can I go cycling in Bhopal today?`  
 **Expected**: Fetch live Open-Meteo weather. If current live weather triggers high severity SOP, status PASS. If live weather is normal/calm, status NOT_TRIGGERED (honest report).  
-**Actual**: `Live weather (Wind: 8.4 km/h, Temp: 24.2 °C) selected_sop=None.`  
+**Actual**: `Live weather (Wind: 8.5 km/h, Temp: 24.1 °C) selected_sop=None.`  
 **Status**: **NOT_TRIGGERED**  
 **Notes**: Live weather did not trigger a high-severity SOP during this run (normal/calm weather conditions).  
 

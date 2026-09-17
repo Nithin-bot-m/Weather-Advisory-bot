@@ -60,6 +60,7 @@ async def match_sops(state: GraphState) -> Dict[str, Any]:
                 "category": sel.sop.category,
                 "severity": sel.sop.severity.value if hasattr(sel.sop.severity, "value") else str(sel.sop.severity),
                 "advice": sel.sop.advice,
+                "situational_override": getattr(sel.sop, "situational_override", False),
                 "matched_conditions": sel.matched_conditions,
             }
 
@@ -91,9 +92,15 @@ async def match_sops(state: GraphState) -> Dict[str, Any]:
 def route_after_sop(state: GraphState) -> str:
     """
     Conditional router after SOP matching.
-    Returns 'matched' if either selected_sop or evaluated_sop is present, otherwise 'no_match'.
+    Returns:
+    - 'situational_override' if selected_sop is a situational override policy
+    - 'matched' if either selected_sop or evaluated_sop is present
+    - 'no_match' if no SOP matches
     """
-    if state.get("selected_sop") or state.get("evaluated_sop"):
+    selected_sop = state.get("selected_sop")
+    if selected_sop and (selected_sop.get("situational_override") or selected_sop.get("category") == "situational_weather"):
+        return "situational_override"
+    if selected_sop or state.get("evaluated_sop"):
         return "matched"
     return "no_match"
 

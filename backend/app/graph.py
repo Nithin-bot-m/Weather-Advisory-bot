@@ -7,7 +7,12 @@ from backend.app.nodes.understand import understand_question
 from backend.app.nodes.location import resolve_location, route_after_location
 from backend.app.nodes.weather import fetch_weather, route_after_weather
 from backend.app.nodes.sop_matcher import match_sops, route_after_sop
-from backend.app.nodes.response import compose_response, no_guidance, error_response
+from backend.app.nodes.response import (
+    compose_response,
+    no_guidance,
+    error_response,
+    situational_override_response,
+)
 
 
 def build_graph():
@@ -21,6 +26,7 @@ def build_graph():
     workflow.add_node("resolve_location", resolve_location)
     workflow.add_node("fetch_weather", fetch_weather)
     workflow.add_node("match_sops", match_sops)
+    workflow.add_node("situational_override_response", situational_override_response)
     workflow.add_node("compose_response", compose_response)
     workflow.add_node("no_guidance", no_guidance)
     workflow.add_node("error_response", error_response)
@@ -52,6 +58,7 @@ def build_graph():
         "match_sops",
         route_after_sop,
         {
+            "situational_override": "situational_override_response",
             "no_match": "no_guidance",
             "matched": "compose_response",
         },
@@ -61,6 +68,7 @@ def build_graph():
     workflow.add_edge("error_response", END)
     workflow.add_edge("no_guidance", END)
     workflow.add_edge("compose_response", END)
+    workflow.add_edge("situational_override_response", END)
 
     return workflow.compile()
 

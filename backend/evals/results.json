@@ -1,5 +1,5 @@
 {
-  "run_timestamp": "2026-09-17T22:50:33.134533",
+  "run_timestamp": "2026-09-17T23:14:42.181271",
   "total_cases": 12,
   "passed": 11,
   "failed": 0,
@@ -53,7 +53,7 @@
       "status": "NOT_TRIGGERED",
       "input": "Can I go cycling in Bhopal today?",
       "expected": "Fetch live Open-Meteo weather. If current live weather triggers high severity SOP, status PASS. If live weather is normal/calm, status NOT_TRIGGERED (honest report).",
-      "actual": "Live weather (Wind: 8.4 km/h, Temp: 24.2 \u00b0C) selected_sop=None.",
+      "actual": "Live weather (Wind: 8.5 km/h, Temp: 24.1 \u00b0C) selected_sop=None.",
       "notes": "Live weather did not trigger a high-severity SOP during this run (normal/calm weather conditions)."
     },
     {

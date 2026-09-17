@@ -6,7 +6,7 @@ A production-grade, SOP-grounded AI assistant built with **LangGraph**, **FastAP
 
 ## Overview
 
-The **Weather-Advisory Support Bot** resolves outdoor activity safety queries by combining real-time meteorological observations with deterministic policy grounding. Rather than permitting an Large Language Model (LLM) to hallucinate safety advice, this system enforces strict control flow where the LLM is restricted to intent understanding and natural language composition, while policy logic and safety thresholds are governed by a 100% deterministic Policy Engine.
+The **Weather-Advisory Support Bot** resolves outdoor activity safety queries by combining real-time meteorological observations with deterministic policy grounding. Rather than permitting a Large Language Model (LLM) to hallucinate safety advice, this system enforces strict control flow where the LLM is restricted to intent understanding and natural language composition, while policy logic and safety thresholds are governed by a 100% deterministic Policy Engine.
 
 ---
 
@@ -47,15 +47,16 @@ graph TD
         WeatherNode --> SOPNode[SOP Matcher: match_sops]
         SOPNode --> Router{route_after_sop}
         
-        Router -- Situational Override / SOP Triggered --> Compose[Composer Node: compose_response]
-        Router -- Evaluated SOP Safe Weather --> Compose
+        Router -- Situational Override --> SitNode[Situational Override Node: situational_override_response]
+        Router -- SOP Triggered / Evaluated --> Compose[Composer Node: compose_response]
         Router -- No Applicable SOP Policy --> NoGuidance[No Guidance Node: no_guidance]
         
         GeoNode -- Location Error --> ErrorNode[Error Response Node: error_response]
         WeatherNode -- Weather Error --> ErrorNode
     end
     
-    Compose --> Output([Final Grounded Response])
+    SitNode --> Output([Final Grounded Response])
+    Compose --> Output
     NoGuidance --> Output
     ErrorNode --> Output
 ```
@@ -69,8 +70,11 @@ The workflow is modeled as a compiled state graph (`StateGraph(GraphState)`):
 2. **`resolve_location`**: Geocodes city names into precise latitude/longitude via Open-Meteo Geocoding API.
 3. **`fetch_weather`**: Fetches live current weather variables from Open-Meteo.
 4. **`match_sops`**: Evaluates weather and normalized activity against `PolicyEngine`.
-5. **`route_after_sop`**: Conditional router directing to `compose_response`, `no_guidance`, or `error_response`.
-6. **`compose_response` / `no_guidance` / `error_response`**: Returns authoritative final response with grounded citations.
+5. **`route_after_sop`**: Conditional router returning:
+   - `"situational_override"` $\rightarrow$ routes to **`situational_override_response`**
+   - `"matched"` $\rightarrow$ routes to **`compose_response`**
+   - `"no_match"` $\rightarrow$ routes to **`no_guidance`**
+6. **`situational_override_response` / `compose_response` / `no_guidance` / `error_response`**: Returns authoritative final response with grounded citations.
 
 ---
 
@@ -79,7 +83,7 @@ The workflow is modeled as a compiled state graph (`StateGraph(GraphState)`):
 * **Orchestration**: LangGraph, LangChain Core
 * **LLM Engine**: OpenAI GPT-4o-mini (`ChatOpenAI`) with Pydantic structured output
 * **Backend API**: FastAPI, Uvicorn, Pydantic v2
-* **Frontend**: Streamlit (Glassmorphic dark/light mode with session memory)
+* **Frontend**: Streamlit
 * **Weather & Geocoding**: Open-Meteo REST API (Zero API key required)
 * **Testing & Evals**: PyTest, AsyncIO, Custom Evaluation Suite Runner
 
@@ -130,9 +134,10 @@ The system currently enforces **14 active SOPs** across **5 distinct categories*
 
 `SOP-014` (Severe Weather System Override) implements an activity-independent policy concept representing extreme atmospheric danger (winds $\ge 60$ km/h).
 
-* **Priority Order**: Situational policies outrank ordinary activity-specific SOPs.
+* **Graph Branching**: `route_after_sop` returns `"situational_override"`, directing execution to the dedicated `situational_override_response` graph node.
+* **Priority Precedence**: Situational policies outrank ordinary activity-specific SOPs.
 * **Deterministic Selection**: When `SOP-014` conditions breach, `PolicyEngine` automatically selects `SOP-014` regardless of the activity requested.
-* **Response Impact**: The system leads with the severe weather warning and cites `SOP-014`.
+* **Response Impact**: The node leads directly with the severe weather warning and cites `SOP-014`.
 
 ---
 
@@ -140,9 +145,10 @@ The system currently enforces **14 active SOPs** across **5 distinct categories*
 
 `SOP-009` (Ideal Picnic Weather Policy) implements continuous multi-attribute qualitative suitability evaluation rather than a binary single-variable threshold (`if x > y`).
 
-* **Multi-Factor Inputs**: Evaluates temperature comfort, wind comfort, and precipitation probability.
-* **Continuous Scoring**: Calculates continuous sub-scores $s_i \in [0.0, 1.0]$ based on parameter comfort spans.
-* **Suitability Index**: Overall composite suitability score $S = \frac{1}{N} \sum s_i$.
+* **Multi-Factor Inputs**: Evaluates temperature comfort, wind comfort, and precipitation probability simultaneously.
+* **Continuous Scoring**: Calculates continuous parameter comfort sub-scores $s_i \in [0.0, 1.0]$ based on comfort spans:
+  $$\text{Temperature Score } s_{\text{temp}} = \max\left(0, 1 - 0.3 \cdot \frac{|\text{temp} - 25|}{7}\right)$$
+* **Composite Suitability Index**: Overall composite outdoor suitability score $S = \frac{1}{N} \sum s_i$.
 * **Decision Boundary**: If $S \ge 0.70$, conditions qualify as suitable for picnics. If $S < 0.70$, the weather is classified as unsuitable/marginal.
 
 ---
@@ -218,7 +224,7 @@ The test runner [`backend/evals/runner.py`](file:///c:/Users/Rohith%20S%20D/OneD
 
 Reviewers can verify zero-code policy hot-adding on the spot:
 1. Open [`backend/app/policies/sops.yaml`](file:///c:/Users/Rohith%20S%20D/OneDrive/Documents/Intern%20Assignment/weather-advisory-bot/backend/app/policies/sops.yaml).
-2. Append a new SOP definition (e.g., `SOP-015` for "kayaking").
+2. Append a new SOP definition using the next available SOP ID (`SOP-015`, e.g., for `kayaking` or `swimming`).
 3. **Do NOT touch any Python file** (`graph.py`, `engine.py`, `weather.py`, or nodes).
 4. Issue a query: *"Can I go kayaking in Bhopal today?"*
 5. The system automatically loads, matches, and evaluates `SOP-015` with full traceability citations.
@@ -245,6 +251,7 @@ weather-advisory-bot/
 │   └── streamlit_app.py      # Streamlit web UI
 ├── .env.example              # Environment variables template
 ├── pytest.ini                # PyTest configuration
+├── render.yaml               # Render Blueprint configuration
 ├── requirements.txt          # Python dependencies
 └── README.md                 # System documentation
 ```
@@ -263,6 +270,7 @@ Environment file configuration (`.env`):
 ```text
 OPENAI_API_KEY=your_openai_api_key_here
 BACKEND_URL=http://localhost:8000
+FRONTEND_URL=http://localhost:8501
 ```
 
 ---
@@ -309,7 +317,7 @@ Run comprehensive evaluation suite:
 
 ## Design Decisions
 
-1. **Decoupled Architecture**: Fast API and Streamlit communicate via structured REST API endpoints.
+1. **Decoupled Architecture**: FastAPI and Streamlit communicate via structured REST API endpoints.
 2. **Pure Python PolicyEngine**: Keeps safety evaluation 100% deterministic and testable without LLM non-determinism.
 3. **Traceability**: Output explicitly surfaces matched SOP IDs, policy titles, severity levels, and matched environmental conditions.
 
@@ -327,4 +335,4 @@ Run comprehensive evaluation suite:
 - [x] Query `"Can I cycle in Bhopal today?"` -> Evaluates `SOP-001` or current weather hazards.
 - [x] Query `"Would taking my bicycle out for a ride in Bhopal today be okay?"` -> Maps to canonical cycling activity.
 - [x] Query `"Can I fly a kite in Bhopal today?"` -> Correctly reports no applicable SOP guidance.
-- [x] Hot-add a new SOP in `sops.yaml` -> Evaluated instantly with zero Python control-flow modifications.
+- [x] Hot-add a new SOP (`SOP-015`) in `sops.yaml` -> Evaluated instantly with zero Python control-flow modifications.
