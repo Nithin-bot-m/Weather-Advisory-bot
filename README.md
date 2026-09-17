@@ -110,15 +110,16 @@ resolve_location (Open-Meteo Geocoding)
 
 | Component | Technology | Responsibility |
 | :--- | :--- | :--- |
-| **Backend API** | Python 3.13 / FastAPI | Web service exposing `/chat` and session endpoints |
-| **Workflow Agent** | LangGraph (`StateGraph`) | Orchestration, state management, and conditional branching |
-| **LLM Provider** | OpenAI `gpt-4o-mini` | Intent extraction and grounded response composition |
-| **Geocoding & Weather**| Open-Meteo API | Free live geocoding and current weather forecasts |
-| **Data Validation** | Pydantic v2 | Typed validation for intents, weather, and SOP schemas |
-| **Policy Configuration**| YAML (`sops.yaml`) | Externally editable Standard Operating Procedures |
-| **Frontend UI** | Streamlit | Chat UI displaying bot responses and SOP traceability |
-| **Testing** | pytest | Unit, integration, and policy regression testing |
-| **Environment** | python-dotenv | Isolated local configuration management |
+| ⚡ **Backend API** | 🐍 Python 3.13 / ⚡ FastAPI | Web service exposing `/chat` and session endpoints |
+| 🔄 **Workflow Agent** | 🔗 LangGraph (`StateGraph`) | Orchestration, state management, and conditional branching |
+| 🤖 **LLM Provider** | 🧠 OpenAI `gpt-4o-mini` | Intent extraction and grounded response composition |
+| 🌤️ **Geocoding & Weather** | 🌐 Open-Meteo API | Free live geocoding and current weather forecasts |
+| 🛡️ **Data Validation** | 📦 Pydantic v2 | Typed validation for intents, weather, and SOP schemas |
+| 📋 **Policy Configuration** | 📄 YAML (`sops.yaml`) | Externally editable Standard Operating Procedures |
+| 🎨 **Frontend UI** | 🎈 Streamlit | Chat UI displaying bot responses and SOP traceability |
+| 🧪 **Testing** | 🚦 pytest | Unit, integration, and policy regression testing |
+| 🔐 **Environment** | ⚙️ python-dotenv | Isolated local configuration management |
+
 
 ---
 
