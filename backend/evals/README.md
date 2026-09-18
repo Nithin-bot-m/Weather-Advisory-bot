@@ -1,7 +1,7 @@
 # Weather Advisory Support Bot — Evaluation Report
 
 ## Summary
-- **Run Timestamp**: `2026-09-18T07:11:35.734734`
+- **Run Timestamp**: `2026-09-18T08:47:11.508523`
 - **Total Cases**: `12`
 - **Passed**: `11`
 - **Failed**: `0`
@@ -81,7 +81,7 @@
 **Type**: `LIVE`  
 **Input**: `Can I go cycling in Bhopal today?`  
 **Expected**: Fetch live Open-Meteo weather. If current live weather triggers high severity SOP, status PASS. If live weather is normal/calm, status NOT_TRIGGERED (honest report).  
-**Actual**: `Live weather (Wind: 7.7 km/h, Temp: 23.6 °C) selected_sop=None.`  
+**Actual**: `Live weather (Wind: 12.6 km/h, Temp: 25.9 °C) selected_sop=None.`  
 **Status**: **NOT_TRIGGERED**  
 **Notes**: Live weather did not trigger a high-severity SOP during this run (normal/calm weather conditions).  
 
@@ -91,10 +91,10 @@
 
 **Type**: `MOCKED`  
 **Input**: `Can I go cycling in Bhopal today?`  
-**Expected**: Evaluates cycling with mocked wind=50 km/h against PolicyEngine. Must select SOP-001 (High Severity Wind Cycling Warning).  
-**Actual**: `Selected SOP 'SOP-001' (Strong Wind Cycling Warning) with high severity under mocked wind=50.0 km/h.`  
+**Expected**: Evaluates cycling with mocked wind=60 km/h against PolicyEngine. Selects SOP-014 (Severe Weather System Override).  
+**Actual**: `Selected situational override SOP 'SOP-014' (Severe Weather System Override) under mocked wind=60.0 km/h.`  
 **Status**: **PASS**  
-**Notes**: DETERMINISTIC / MOCKED: Successfully verified high wind cycling hazard SOP-001 selection.  
+**Notes**: DETERMINISTIC / MOCKED: Successfully verified severe weather situational override SOP-014 selection under 60.0 km/h wind.  
 
 ---
 

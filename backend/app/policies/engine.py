@@ -62,17 +62,78 @@ class PolicyEngine:
 
     def evaluate_conditions(self, sop: SOP, weather: Any) -> Tuple[bool, Dict[str, float]]:
         """
-        Evaluates weather data against SOP conditions.
-        - Supports numeric threshold mode (AND logic) and fuzzy suitability score mode.
+        Evaluates weather data against SOP conditions or fuzzy factors.
+        - Supports numeric threshold mode (AND logic) and continuous fuzzy suitability score mode.
         - If a required weather field is missing/None, evaluation FAILS (no fabrication of missing data).
         """
         matched_values: Dict[str, float] = {}
 
-        if not sop.conditions:
-            return False, {}
-
         # Handle fuzzy continuous evaluation if requested by SOP schema
         if getattr(sop, "eval_type", "numeric") == "fuzzy":
+            fuzzy_factors = getattr(sop, "fuzzy_factors", None)
+            if fuzzy_factors:
+                total_weighted_score = 0.0
+                total_weight = 0.0
+
+                for factor_name, factor_config in fuzzy_factors.items():
+                    field_key = factor_name
+                    if field_key == "temperature":
+                        field_key = "temperature_2m"
+                    elif field_key == "wind":
+                        field_key = "wind_speed_10m"
+
+                    weather_val = None
+                    if isinstance(weather, dict):
+                        weather_val = weather.get(field_key) if weather.get(field_key) is not None else weather.get(factor_name)
+                    elif hasattr(weather, field_key):
+                        weather_val = getattr(weather, field_key)
+                    elif hasattr(weather, factor_name):
+                        weather_val = getattr(weather, factor_name)
+
+                    if weather_val is None:
+                        return False, {}
+
+                    try:
+                        val_float = float(weather_val)
+                    except (ValueError, TypeError):
+                        return False, {}
+
+                    matched_values[field_key] = val_float
+
+                    weight = factor_config.weight if factor_config.weight is not None else 1.0
+                    tol = max(factor_config.tolerance, 0.001)
+
+                    if factor_config.ideal is not None:
+                        diff = abs(val_float - factor_config.ideal)
+                        score = max(0.0, 1.0 - (diff / tol))
+                    elif factor_config.ideal_max is not None:
+                        if val_float <= factor_config.ideal_max:
+                            score = 1.0
+                        else:
+                            score = max(0.0, 1.0 - ((val_float - factor_config.ideal_max) / tol))
+                    elif factor_config.ideal_min is not None:
+                        if val_float >= factor_config.ideal_min:
+                            score = 1.0
+                        else:
+                            score = max(0.0, 1.0 - ((factor_config.ideal_min - val_float) / tol))
+                    else:
+                        score = 1.0
+
+                    total_weighted_score += score * weight
+                    total_weight += weight
+
+                if total_weight <= 0:
+                    return False, {}
+
+                overall_suitability = total_weighted_score / total_weight
+                matched_values["suitability_score"] = round(overall_suitability, 2)
+                req_threshold = sop.suitability_threshold if sop.suitability_threshold is not None else 0.70
+                return (overall_suitability >= req_threshold), matched_values
+
+            # Fallback legacy fuzzy continuous evaluation over conditions dictionary
+            if not sop.conditions:
+                return False, {}
+
             scores: List[float] = []
             for field_name, threshold in sop.conditions.items():
                 weather_val = None
@@ -91,7 +152,6 @@ class PolicyEngine:
 
                 matched_values[field_name] = val_float
 
-                # Compute continuous parameter comfort score between 0.0 and 1.0
                 min_v = threshold.min
                 max_v = threshold.max
                 if min_v is not None and max_v is not None:
@@ -127,8 +187,10 @@ class PolicyEngine:
             return (overall_suitability >= req_threshold), matched_values
 
         # Standard numeric evaluation
+        if not sop.conditions:
+            return False, {}
+
         for field_name, threshold in sop.conditions.items():
-            # Support both object attributes and dictionary keys
             weather_val = None
             if isinstance(weather, dict):
                 weather_val = weather.get(field_name)
@@ -136,7 +198,6 @@ class PolicyEngine:
                 weather_val = getattr(weather, field_name)
 
             if weather_val is None:
-                # Never fabricate or assume missing weather values
                 return False, {}
 
             try:
@@ -144,11 +205,9 @@ class PolicyEngine:
             except (ValueError, TypeError):
                 return False, {}
 
-            # Check min threshold
             if threshold.min is not None and val_float < threshold.min:
                 return False, {}
 
-            # Check max threshold
             if threshold.max is not None and val_float > threshold.max:
                 return False, {}
 

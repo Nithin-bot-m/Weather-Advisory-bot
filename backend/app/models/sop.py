@@ -21,13 +21,22 @@ class FieldThreshold(BaseModel):
         return v
 
 
+class FuzzyFactor(BaseModel):
+    ideal: Optional[float] = Field(None, description="Ideal target value")
+    ideal_max: Optional[float] = Field(None, description="Upper boundary for maximum comfort")
+    ideal_min: Optional[float] = Field(None, description="Lower boundary for minimum comfort")
+    tolerance: float = Field(..., description="Tolerance range for scaling score penalty")
+    weight: float = Field(1.0, description="Weight of this factor in overall suitability score")
+
+
 class SOP(BaseModel):
     id: str = Field(..., description="Unique SOP ID (e.g. SOP-001)")
     category: str = Field(..., description="Category (outdoor_exercise, travel, vulnerable_groups, recreation)")
     name: str = Field(..., description="Human-readable policy name")
     severity: SeverityLevel = Field(..., description="Severity level: high, medium, low")
     activities: List[str] = Field(..., description="List of activity names/keywords matching this policy")
-    conditions: Dict[str, FieldThreshold] = Field(..., description="Weather field threshold conditions")
+    conditions: Dict[str, FieldThreshold] = Field(default_factory=dict, description="Weather field threshold conditions")
+    fuzzy_factors: Optional[Dict[str, FuzzyFactor]] = Field(None, description="Fuzzy evaluation factors for continuous scoring")
     advice: str = Field(..., description="Configured safety advice string")
     situational_override: bool = Field(False, description="Whether this SOP is a broad situational override policy")
     eval_type: str = Field("numeric", description="Evaluation mode: numeric or fuzzy")

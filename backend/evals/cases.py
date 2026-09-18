@@ -60,9 +60,9 @@ EVAL_CASES: List[EvalCase] = [
     EvalCase(
         case_id="EVAL-005-MOCK",
         category="severe_weather",
-        description="Deterministic Severe Weather — Mocked high wind cycling hazard",
+        description="Deterministic Severe Weather — Mocked severe weather hazard (60 km/h wind)",
         user_message="Can I go cycling in Bhopal today?",
-        expected_behavior="Evaluates cycling with mocked wind=50 km/h against PolicyEngine. Must select SOP-001 (High Severity Wind Cycling Warning).",
+        expected_behavior="Evaluates cycling with mocked wind=60 km/h against PolicyEngine. Selects SOP-014 (Severe Weather System Override).",
         evaluation_type="mocked",
     ),
     EvalCase(

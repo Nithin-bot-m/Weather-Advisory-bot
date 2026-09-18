@@ -140,14 +140,19 @@ sops:
       - outdoor gathering
       - outdoor leisure
       - park outing
-    conditions:
+    fuzzy_factors:
       temperature_2m:
-        min: 18
-        max: 32
+        ideal: 25
+        tolerance: 7
+        weight: 0.4
       wind_speed_10m:
-        max: 25
+        ideal_max: 15
+        tolerance: 15
+        weight: 0.3
       precipitation_probability:
-        max: 30
+        ideal_max: 10
+        tolerance: 50
+        weight: 0.3
     advice: >
       Weather conditions evaluate to a high outdoor comfort index (>= 0.70 suitability score based on temperature, wind, and rain probability).
       Conditions are suitable for picnics and outdoor gatherings.

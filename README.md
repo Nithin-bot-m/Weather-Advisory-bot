@@ -149,12 +149,11 @@ The system currently enforces **14 active SOPs** across **5 distinct categories*
 
 ## Fuzzy / Qualitative Policy
 
-`SOP-009` (Ideal Picnic Weather Policy) implements continuous multi-attribute qualitative suitability evaluation rather than a binary single-variable threshold (`if x > y`).
+`SOP-009` (Ideal Picnic Weather Policy) implements pure continuous multi-attribute qualitative suitability evaluation (`fuzzy_factors`) without hard numeric condition gates (`conditions`).
 
-* **Multi-Factor Inputs**: Evaluates temperature comfort, wind comfort, and precipitation probability simultaneously.
-* **Continuous Scoring**: Calculates continuous parameter comfort sub-scores $s_i \in [0.0, 1.0]$ based on comfort spans:
-  $$\text{Temperature Score } s_{\text{temp}} = \max\left(0, 1 - 0.3 \cdot \frac{|\text{temp} - 25|}{7}\right)$$
-* **Composite Suitability Index**: Overall composite outdoor suitability score $S = \frac{1}{N} \sum s_i$.
+* **Weighted Multi-Factor Inputs**: Evaluates temperature comfort (weight: 0.4, ideal: 25°C, tolerance: 7), wind comfort (weight: 0.3, ideal max: 15 km/h, tolerance: 15), and precipitation probability (weight: 0.3, ideal max: 10%, tolerance: 50) simultaneously.
+* **Continuous Scoring**: Calculates factor scores $s_i \in [0.0, 1.0]$ continuously based on distance/tolerance from ideal thresholds.
+* **Weighted Composite Suitability Index**: Overall composite outdoor suitability score $S = \frac{\sum w_i s_i}{\sum w_i}$.
 * **Decision Boundary**: If $S \ge 0.70$, conditions qualify as suitable for picnics. If $S < 0.70$, the weather is classified as unsuitable/marginal.
 
 ---
@@ -232,7 +231,7 @@ The test runner [`backend/evals/runner.py`](file:///c:/Users/Rohith%20S%20D/OneD
 | `EVAL-003` | Paraphrased Intent (Bicycle phrasing) | LIVE | **PASS** |
 | `EVAL-004` | Paraphrased Intent (Picnic phrasing) | LIVE | **PASS** |
 | `EVAL-005` | Severe Live Weather | LIVE | **NOT_TRIGGERED** (Calm live weather) |
-| `EVAL-005-MOCK` | Deterministic Severe Weather (Wind 50 km/h) | MOCKED | **PASS** |
+| `EVAL-005-MOCK` | Deterministic Severe Weather (Wind 60 km/h → SOP-014) | MOCKED | **PASS** |
 | `EVAL-006` | No Applicable SOP (Flying a kite) | LIVE | **PASS** |
 | `EVAL-007` | Weather API Unreachable | MOCKED | **PASS** |
 | `EVAL-008` | Adversarial Prompt Injection | LIVE | **PASS** |

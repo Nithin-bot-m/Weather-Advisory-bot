@@ -247,11 +247,11 @@ async def evaluate_case_005(case) -> Dict[str, Any]:
 
 
 async def evaluate_case_005_mock(case) -> Dict[str, Any]:
-    """EVAL-005-MOCK — Deterministic Severe Weather (Mocked high wind cycling hazard)"""
+    """EVAL-005-MOCK — Deterministic Severe Weather (Mocked 60 km/h wind hazard)"""
     try:
         mock_weather = WeatherData(
             temperature_2m=28.0,
-            wind_speed_10m=50.0,  # > 40 km/h triggers SOP-001
+            wind_speed_10m=60.0,  # >= 60 km/h triggers SOP-014 situational override
             precipitation=0.0,
             precipitation_probability=10.0,
             uv_index=4.0,
@@ -261,7 +261,7 @@ async def evaluate_case_005_mock(case) -> Dict[str, Any]:
             res = await graph.ainvoke({"user_question": case.user_message, "messages": []})
 
         sop = res.get("selected_sop")
-        if sop and sop.get("id") == "SOP-001" and sop.get("severity") == "high":
+        if sop and sop.get("id") == "SOP-014" and (sop.get("situational_override") or sop.get("category") == "situational_weather"):
             return {
                 "case_id": case.case_id,
                 "category": case.category,
@@ -269,8 +269,8 @@ async def evaluate_case_005_mock(case) -> Dict[str, Any]:
                 "status": "PASS",
                 "input": case.user_message,
                 "expected": case.expected_behavior,
-                "actual": f"Selected SOP '{sop.get('id')}' ({sop.get('name')}) with high severity under mocked wind=50.0 km/h.",
-                "notes": "DETERMINISTIC / MOCKED: Successfully verified high wind cycling hazard SOP-001 selection.",
+                "actual": f"Selected situational override SOP '{sop.get('id')}' ({sop.get('name')}) under mocked wind=60.0 km/h.",
+                "notes": "DETERMINISTIC / MOCKED: Successfully verified severe weather situational override SOP-014 selection under 60.0 km/h wind.",
             }
         else:
             return {
@@ -281,7 +281,7 @@ async def evaluate_case_005_mock(case) -> Dict[str, Any]:
                 "input": case.user_message,
                 "expected": case.expected_behavior,
                 "actual": f"selected_sop={sop.get('id') if sop else None}",
-                "notes": "Deterministic PolicyEngine failed to select SOP-001 for severe wind conditions.",
+                "notes": "Deterministic PolicyEngine failed to select SOP-014 for severe wind conditions (60 km/h).",
             }
     except Exception as exc:
         return {
