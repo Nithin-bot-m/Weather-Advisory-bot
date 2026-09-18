@@ -56,7 +56,7 @@ class PolicyEngine:
         norm_act = normalize_activity(activity)
         for target_act in sop.activities:
             target_norm = normalize_activity(target_act)
-            if target_norm in ("all", "outdoor", "general", "situational") or norm_act == target_norm or target_norm in norm_act or norm_act in target_norm:
+            if target_norm in ("all", "outdoor", "general", "situational") or norm_act == target_norm:
                 return True
         return False
 

@@ -86,6 +86,7 @@ async def chat_endpoint(request: ChatRequest):
         session_id=session_id,
         message=user_msg,
         response=response_text,
+        intent=final_state.get("intent"),
         activity=final_state.get("activity"),
         location=final_state.get("location"),
         time_context=final_state.get("time_context"),

@@ -20,6 +20,7 @@ class ChatResponse(BaseModel):
     session_id: str = Field(..., description="Unique session identifier")
     message: str = Field(..., description="Original user message")
     response: Optional[str] = Field(None, description="Natural language bot response or fallback guidance")
+    intent: Optional[str] = Field(None, description="Extracted intent category (activity_advisory, weather_query, general, unsupported)")
     activity: Optional[str] = Field(None, description="Extracted outdoor activity")
     location: Optional[str] = Field(None, description="Extracted city or location query")
     time_context: Optional[str] = Field(None, description="Extracted time context (e.g. today, evening)")

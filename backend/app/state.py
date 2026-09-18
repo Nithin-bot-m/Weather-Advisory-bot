@@ -10,6 +10,7 @@ class GraphState(TypedDict, total=False):
     messages: List[Dict[str, Any]]
 
     # EXTRACTED INTENT
+    intent: Optional[str]
     activity: Optional[str]
     location: Optional[str]
     time_context: Optional[str]

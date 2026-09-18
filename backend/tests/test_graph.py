@@ -22,6 +22,7 @@ def mock_openai_intent_cycling_bhopal():
         mock_instance = MagicMock()
         mock_structured = MagicMock()
         mock_structured.ainvoke = AsyncMock(return_value=UserIntent(
+            intent="activity_advisory",
             activity="cycling",
             location="Bhopal",
             time_context="today"
@@ -38,6 +39,7 @@ def mock_openai_intent_kite_bhopal():
         mock_instance = MagicMock()
         mock_structured = MagicMock()
         mock_structured.ainvoke = AsyncMock(return_value=UserIntent(
+            intent="activity_advisory",
             activity="flying a kite",
             location="Bhopal",
             time_context="today"
@@ -54,6 +56,7 @@ def mock_openai_intent_invalid_location():
         mock_instance = MagicMock()
         mock_structured = MagicMock()
         mock_structured.ainvoke = AsyncMock(return_value=UserIntent(
+            intent="activity_advisory",
             activity="cycling",
             location="XYZ_NONEXISTENT_CITY_12345",
             time_context="today"
@@ -210,6 +213,7 @@ def test_prompt_injection_safety(mock_weather_data):
             mock_instance = MagicMock()
             mock_structured = MagicMock()
             mock_structured.ainvoke = AsyncMock(return_value=UserIntent(
+                intent="activity_advisory",
                 activity="cycling",
                 location="Bhopal",
                 time_context="today"
@@ -249,6 +253,7 @@ def test_session_context_recovery():
             mock_instance = MagicMock()
             mock_structured = MagicMock()
             mock_structured.ainvoke = AsyncMock(return_value=UserIntent(
+                intent="activity_advisory",
                 activity="cycling",
                 location="Bhopal",
                 time_context="evening"

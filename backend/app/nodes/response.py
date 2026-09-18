@@ -109,14 +109,21 @@ USER QUESTION:
         return {
             "response": res.content,
         }
-    except Exception as exc:
+    except Exception:
         target_sop = selected_sop or evaluated_sop or {}
         sop_id = target_sop.get("id", "N/A")
         sop_name = target_sop.get("name", "N/A")
-        advice = target_sop.get("advice", "Weather evaluated against policy.")
-        return {
-            "response": f"[{sop_id}: {sop_name}] {advice.strip()} (Response generation fallback: {exc})"
-        }
+        advice = target_sop.get("advice", "")
+        if selected_sop:
+            return {
+                "response": f"[{sop_id}: {sop_name}] {advice.strip()}"
+            }
+        elif evaluated_sop:
+            return {
+                "response": f"[{sop_id}: {sop_name}] Evaluated weather conditions in {location.get('name', 'the location')}. Live weather parameters are within safe limits according to policy thresholds."
+            }
+        else:
+            return {"response": "No applicable SOP policy found."}
 
 
 
@@ -195,11 +202,70 @@ USER QUESTION:
         return {
             "response": res.content,
         }
-    except Exception as exc:
+    except Exception:
         sop_id = selected_sop.get("id", "SOP-014")
         sop_name = selected_sop.get("name", "Severe Weather System Override")
         advice = selected_sop.get("advice", "")
         return {
-            "response": f"[{sop_id}: {sop_name}] {advice.strip()} (Response generation fallback: {exc})"
+            "response": f"[{sop_id}: {sop_name}] {advice.strip()}"
         }
+
+
+async def weather_response(state: GraphState) -> Dict[str, Any]:
+    """
+    Format natural language weather forecast for general weather queries without evaluating activity SOPs.
+    """
+    weather = state.get("weather") or {}
+    resolved_loc = state.get("resolved_location") or {}
+    city_name = resolved_loc.get("name") or state.get("location") or "the requested location"
+
+    temp = weather.get("temperature_2m", "N/A")
+    wind = weather.get("wind_speed_10m", "N/A")
+    precip = weather.get("precipitation", "N/A")
+    precip_prob = weather.get("precipitation_probability", "N/A")
+    uv = weather.get("uv_index", "N/A")
+
+    api_key = os.getenv("OPENAI_API_KEY")
+    if not api_key:
+        return {
+            "response": f"Current weather forecast for {city_name}: Temperature: {temp}°C, Wind Speed: {wind} km/h, Precipitation: {precip} mm (Probability: {precip_prob}%), UV Index: {uv}.",
+            "selected_sop": None,
+        }
+
+    try:
+        model_name = os.getenv("OPENAI_MODEL", "gpt-4o-mini")
+        llm = ChatOpenAI(model=model_name, temperature=0, api_key=api_key)
+        system_prompt = "You are a weather information assistant. Provide a concise, accurate weather summary strictly using the provided factual weather data."
+        user_prompt = f"City: {city_name}\nWeather Data: {json.dumps(weather, indent=2)}"
+        res = await llm.ainvoke([SystemMessage(content=system_prompt), HumanMessage(content=user_prompt)])
+        return {
+            "response": res.content,
+            "selected_sop": None,
+        }
+    except Exception:
+        return {
+            "response": f"Current weather forecast for {city_name}: Temperature: {temp}°C, Wind Speed: {wind} km/h, Precipitation: {precip} mm (Probability: {precip_prob}%), UV Index: {uv}.",
+            "selected_sop": None,
+        }
+
+
+async def general_response(state: GraphState) -> Dict[str, Any]:
+    """
+    Handle greetings and general conversational inquiries without invoking weather lookup or policy engine.
+    """
+    return {
+        "response": "Hello! I am your Weather Advisory Support Bot. Ask me about weather conditions in a city or whether an outdoor activity (like walking, cycling, running, or hiking) is safe given current weather.",
+        "selected_sop": None,
+    }
+
+
+async def unsupported_response(state: GraphState) -> Dict[str, Any]:
+    """
+    Handle unrelated or out-of-scope questions without calling weather service or policy engine.
+    """
+    return {
+        "response": "I am designed specifically for weather forecasts and outdoor activity safety advisories. Please ask me about the weather in a city or whether an outdoor activity is safe.",
+        "selected_sop": None,
+    }
+
 

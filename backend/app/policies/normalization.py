@@ -7,6 +7,14 @@ from typing import Dict
 
 # Dictionary mapping activity synonyms/variations to canonical terms
 ACTIVITY_SYNONYMS: Dict[str, str] = {
+    # Walking variations
+    "walking": "walking",
+    "walk": "walking",
+    "stroll": "walking",
+    "go for a walk": "walking",
+    "going for a walk": "walking",
+    "walk around": "walking",
+
     # Cycling / Biking variations
     "cycling": "cycling",
     "cycle": "cycling",
@@ -101,10 +109,10 @@ def normalize_activity(activity: str) -> str:
     if raw_clean in ACTIVITY_SYNONYMS:
         return ACTIVITY_SYNONYMS[raw_clean]
 
-    # Substring / phrase match in synonym dictionary (longest phrases first)
+    # Word boundary phrase match in synonym dictionary (longest phrases first)
     sorted_synonyms = sorted(ACTIVITY_SYNONYMS.items(), key=lambda x: -len(x[0]))
     for phrase, canonical in sorted_synonyms:
-        if phrase in raw_clean or (len(phrase) >= 4 and raw_clean in phrase):
+        if re.search(r'\b' + re.escape(phrase) + r'\b', raw_clean):
             return canonical
 
     return raw_clean
