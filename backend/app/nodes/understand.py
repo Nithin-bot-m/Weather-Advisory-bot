@@ -38,6 +38,7 @@ Extract the following fields:
 Guidelines:
 - Do NOT classify general weather queries as activity_advisory.
 - Do NOT classify math or jokes as weather_query or activity_advisory.
+- Normalize common city name spellings, variants, or typos (e.g. "banglore" or "bangalore" -> "Bengaluru").
 - If the user asks a follow-up question (e.g., "What about this evening?", "How about tomorrow?"), recover activity/location from prior context only if the follow-up relates to an ongoing advisory or weather inquiry.
 
 Do NOT provide advice.
@@ -99,22 +100,40 @@ def extract_activity_from_text(text: str) -> Optional[str]:
     return None
 
 
+CITY_ALIASES = {
+    "banglore": "Bengaluru",
+    "bangalore": "Bengaluru",
+    "bengaluru": "Bengaluru",
+    "bhopal": "Bhopal",
+    "mumbai": "Mumbai",
+    "bombay": "Mumbai",
+    "delhi": "Delhi",
+    "new delhi": "Delhi",
+    "chennai": "Chennai",
+    "madras": "Chennai",
+    "kolkata": "Kolkata",
+    "calcutta": "Kolkata",
+    "hyderabad": "Hyderabad",
+    "pune": "Pune",
+    "poona": "Pune",
+}
+
+
 def extract_location_from_text(text: str) -> Optional[str]:
     t = text.lower()
-    if "bhopal" in t:
-        return "Bhopal"
-    elif "bengaluru" in t or "bangalore" in t:
-        return "Bengaluru"
-    elif "mumbai" in t:
-        return "Mumbai"
-    elif "delhi" in t:
-        return "Delhi"
-    elif "xyz_nonexistent_city" in t:
+    for alias, canonical in CITY_ALIASES.items():
+        if alias in t:
+            return canonical
+    if "xyz_nonexistent_city" in t:
         return "XYZ_NONEXISTENT_CITY_12345"
 
-    m = re.search(r"\b(?:in|at|for|near)\s+([A-Z][a-zA-Z]+)\b", text)
+    m = re.search(r"\b(?:in|at|for|near)\s+([a-zA-Z]+)\b", text, re.IGNORECASE)
     if m:
-        return m.group(1)
+        loc_candidate = m.group(1).strip()
+        loc_lower = loc_candidate.lower()
+        if loc_lower in CITY_ALIASES:
+            return CITY_ALIASES[loc_lower]
+        return loc_candidate.capitalize()
     return None
 
 
