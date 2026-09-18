@@ -159,12 +159,28 @@ The system currently enforces **14 active SOPs** across **5 distinct categories*
 
 ---
 
-## Conflict Resolution
+## Policy Precedence & Conflict Resolution
 
-When multiple SOP policies apply to a query, `PolicyEngine` enforces deterministic conflict resolution:
-1. **Situational Override**: `situational_override = True` outranks all standard activity SOPs.
-2. **Severity Hierarchy**: `HIGH` ($3$) > `MEDIUM` ($2$) > `LOW` ($1$).
-3. **Deterministic Tie-Breaking**: Alphabetical sorting by SOP ID (`SOP-001` before `SOP-002`).
+1. **Normal Activity-Specific SOPs**: Normal activity-specific policies exist for activities such as cycling (`SOP-001`), walking (`SOP-011`), hiking (`SOP-003`), picnic (`SOP-009`), etc.
+2. **Situational Weather Precedence**: Situational weather policies (`situational_override: true`, e.g., `SOP-014`) have higher precedence than normal activity-specific SOPs when their trigger conditions are active.
+3. **Precedence Example**:
+   - User asks: *"Can I go for a picnic?"*
+   - Under normal conditions, the request evaluates against the normal picnic policy (`SOP-009`).
+   - If severe weather conditions are active (e.g., wind speed $\ge 60$ km/h), the situational severe-weather condition triggers:
+     ```text
+     normal picnic/activity policy (SOP-009)
+             ↓
+     situational severe-weather condition (wind >= 60 km/h)
+             ↓
+     SOP-014 selected (Severe Weather System Override)
+     ```
+4. **Deterministic Selection**: Policy selection is 100% deterministic.
+5. **Intent Understanding**: The LLM performs intent understanding and extraction (`UserIntent`: intent category, activity, location, time context).
+6. **LLM Control Bound**: The LLM does **NOT** decide which safety policy wins or override safety thresholds.
+7. **Engine Authority**: The deterministic `PolicyEngine` determines the applicable policy according to configured precedence and policy conditions:
+   - `situational_override = True` outranks all standard activity SOPs.
+   - Severity rank: `HIGH` ($3$) > `MEDIUM` ($2$) > `LOW` ($1$).
+   - Deterministic tie-breaking by SOP ID (`SOP-001` before `SOP-002`).
 
 ---
 

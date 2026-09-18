@@ -1,7 +1,7 @@
 # Weather Advisory Support Bot — Evaluation Report
 
 ## Summary
-- **Run Timestamp**: `2026-09-17T23:14:42.181271`
+- **Run Timestamp**: `2026-09-18T07:11:35.734734`
 - **Total Cases**: `12`
 - **Passed**: `11`
 - **Failed**: `0`
@@ -48,7 +48,7 @@
 **Type**: `LIVE`  
 **Input**: `Is having a picnic in Bhopal today okay?`  
 **Expected**: Extract activity (picnic) and location (Bhopal), resolve coordinates, fetch weather, evaluate PolicyEngine SOPs, return authoritative SOP response with traceability.  
-**Actual**: `Extracted activity='picnic', location='Bhopal', selected_sop=None.`  
+**Actual**: `Extracted activity='picnic', location='Bhopal', selected_sop=SOP-009.`  
 **Status**: **PASS**  
 **Notes**: Picnic intent recognized, live weather fetched, SOP policy evaluated.  
 
@@ -81,7 +81,7 @@
 **Type**: `LIVE`  
 **Input**: `Can I go cycling in Bhopal today?`  
 **Expected**: Fetch live Open-Meteo weather. If current live weather triggers high severity SOP, status PASS. If live weather is normal/calm, status NOT_TRIGGERED (honest report).  
-**Actual**: `Live weather (Wind: 8.5 km/h, Temp: 24.1 °C) selected_sop=None.`  
+**Actual**: `Live weather (Wind: 7.7 km/h, Temp: 23.6 °C) selected_sop=None.`  
 **Status**: **NOT_TRIGGERED**  
 **Notes**: Live weather did not trigger a high-severity SOP during this run (normal/calm weather conditions).  
 
